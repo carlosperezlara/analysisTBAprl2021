@@ -16,6 +16,11 @@ void qa_bar(bar *prototype) {
   std::cout << lowA->GetAmplitude() << " " << lowA->GetTime() << std::endl;
 }
 
+//void loadlogbook() {
+//  ifstream fin;
+//  
+//}
+
 //===========================
 
 int main(int nvar, char** carg) {
