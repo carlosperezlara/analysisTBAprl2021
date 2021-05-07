@@ -1,0 +1,7 @@
+pdf/*.pdf
+log/*.txt
+*.cpp
+run
+bin
+*~
+*.pcm

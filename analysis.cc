@@ -18,8 +18,16 @@ void qa_bar(bar *prototype) {
 
 //===========================
 
-int main() {
-  int run, chSiPM0, chSiPM1;
+int main(int nvar, char** carg) {
+  //////////////////////////////////////
+  if(nvar<2) return 1;
+  TString crun = carg[1];
+  std::cout << crun.Data() << std::endl;
+  int run = crun.Atoi();//44734;
+  //////////////////////////////////////
+  TString inputfile = Form("/Volumes/uva/analysis/rootfiles/Run_%d.root",run);
+  std::cout << "Readding from " << inputfile.Data() << std::endl;
+  
   struct pulse_t {
     Int_t event;
     Short_t tc[2];
@@ -34,15 +42,12 @@ int main() {
   } pulse;
   
 
-  //////////////////////////////////////
-  run = 44734;
-  //////////////////////////////////////
   gStyle->SetOptStat(0);
   qabar *mybarqa[4];
   for(int i=0; i!=4; ++i)
     mybarqa[i] = new qabar();
   
-  TFile *file = new TFile( Form("/Volumes/uva/analysis/rootfiles/Run_%d.root",run) );
+  TFile *file = new TFile( inputfile.Data() );
   TTree *tree = (TTree*) file->Get("pulse");
   tree->SetBranchAddress("channel",&pulse.channel);
   tree->SetBranchAddress("times",&pulse.times);
@@ -95,7 +100,9 @@ int main() {
 
   }
   //main->SaveAs("check.pdf]","pdf");
-  for(int i=0; i!=4; ++i)
-    mybarqa[i]->saveas( Form("QA_Run%d_Bar%d",run,i) );
+  for(int i=0; i!=4; ++i) {
+    mybarqa[i]->saveas( Form("pdf/QA_Run%d_Bar%d",run,i) );
+    mybarqa[i]->makesummary( Form("log/QA_Run%d_Bar%d",run,i) );
+  }
   return 0;
 }

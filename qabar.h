@@ -13,10 +13,12 @@ class qabar {
   ~qabar();
   void fill(bar *mybar);
   void saveas(TString file);
+  void makesummary(TString file);
   
  private:
   TH1D *base_mean[4];
   TH1D *base_rms[4];
+  TH1D *amp_dist[4];
   TH2D *min_spot[4];
   TH2D *thr_spot[4];
   TProfile *shape_class[3][4];

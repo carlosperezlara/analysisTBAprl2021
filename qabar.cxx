@@ -1,3 +1,6 @@
+#include <iostream>
+#include <fstream>
+
 #include "waveform.h"
 #include "bar.h"
 #include "qabar.h"
@@ -13,9 +16,10 @@ qabar::qabar() {
   int color[3] = {kBlue-3,kGreen-3,kRed-3};
   for(int i=0; i!=4; ++i) {
     base_mean[i] = new TH1D( Form("base_mean_%d",i),Form("base_mean_%d;mV",i),   100,280,360);
-    base_rms[i] =  new TH1D( Form("base_rms_%d",i), Form("base_rms_%d;mV",i),    100,0,3);
+    base_rms[i] =  new TH1D( Form("base_rms_%d",i), Form("base_rms_%d;mV",i),    100,0,20);
     min_spot[i] =  new TH2D( Form("min_spot_%d",i), Form("min_spot_%d;bin;mV",i),100,0,1024,100,0,1000);
     thr_spot[i] =  new TH2D( Form("thr_spot_%d",i), Form("thr_spot_%d;ns;mV",i), 100,0,200,100,0,1000);
+    amp_dist[i] =  new TH1D( Form("amp_dist_%d",i), Form("amp_dist_%d;mV",i),    100,0,1000);
     for(int cl=0; cl!=3; ++cl) {
       shape_class[cl][i] = new TProfile( Form("shape_class%d_%d",cl,i), Form("shape_class%d_%d;ns;mV",cl,i), 2048,-120,+120 );;
       shape_class[cl][i]->SetLineColor( color[cl] );
@@ -42,11 +46,12 @@ void qabar::fill(bar *mybar) {
     base_rms[i]->Fill( channelL->GetBaseRMS() );
     min_spot[i]->Fill( channelL->GetAmplitudeBin(), -channelL->GetAmplitude() );
     thr_spot[i]->Fill( channelL->GetTime(), -channelL->GetAmplitude() );
+    amp_dist[i]->Fill( -channelL->GetAmplitude() );
     base_mean[i+2]->Fill( channelH->GetBaseMean() );
     base_rms[i+2]->Fill( channelH->GetBaseRMS() );
     min_spot[i+2]->Fill( channelH->GetAmplitudeBin(), -channelH->GetAmplitude() );
     thr_spot[i+2]->Fill( channelH->GetTime(), -channelH->GetAmplitude() );
-
+    amp_dist[i+2]->Fill( -channelH->GetAmplitude() );
     Double_t amplitudeRaw = -channelL->GetAmplitude();
     int nclass=-1;
     if( (amplitudeRaw>xclass[0][i]) && (amplitudeRaw<xclass[1][i]) ) nclass = 0;
@@ -83,8 +88,16 @@ void qabar::saveas(TString file){
   main->SaveAs( Form("%s.pdf[",file.Data()), "PDF" );
   for(int i=0; i!=4; ++i) {
     main->cd(1+i);
+    TF1 *fit = new TF1( Form("fit%d",i), "gaus" );
+    base_rms[i]->Fit( fit );
     base_rms[i]->DrawCopy();
   }
+  main->SaveAs( Form("%s.pdf[",file.Data()), "PDF" );
+  for(int i=0; i!=4; ++i) {
+    main->cd(1+i);
+    amp_dist[i]->DrawCopy();
+  }
+
   main->SaveAs( Form("%s.pdf[",file.Data()), "PDF" );
   for(int i=0; i!=4; ++i) {
     main->cd(1+i);
@@ -125,4 +138,13 @@ void qabar::saveas(TString file){
   }
   main->SaveAs( Form("%s.pdf[",file.Data()), "PDF" );
   main->SaveAs( Form("%s.pdf]",file.Data()), "PDF" ); 
+}
+
+void qabar::makesummary(TString file){
+  std::ofstream fout( Form("%s.txt",file.Data()) );
+  for(int i=0; i!=4; ++i) {
+    TF1 *fit = (TF1*) (base_rms[i]->GetListOfFunctions())->At(0);
+    fout << fit->GetParameter(1) << " " << std::endl;
+  }
+  fout.close();
 }
