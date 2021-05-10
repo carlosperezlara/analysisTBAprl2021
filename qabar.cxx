@@ -23,9 +23,9 @@ qabar::qabar(TString name) {
     }
     base_mean[i] = new TH1D( Form("base_mean_%d_%s",i,name.Data()),Form("base_mean_%d;mV",i),   100,minPed,maxPed);
     base_rms[i] =  new TH1D( Form("base_rms_%d_%s",i,name.Data()), Form("base_rms_%d;mV",i),    100,0,maxRMS);
-    wave_all[i] =  new TH2D( Form("wave_all_%d_%s",i,name.Data()), Form("wave_all_%d;mV",i),    100,0,200,100,-1050,+1050);
+    wave_all[i] =  new TH2D( Form("wave_all_%d_%s",i,name.Data()), Form("wave_all_%d;mV",i),    100,0,200, 100,-1050,+1050);
     min_spot[i] =  new TH2D( Form("min_spot_%d_%s",i,name.Data()), Form("min_spot_%d;bin;mV",i),100,0,1024,100,0,1000);
-    thr_spot[i] =  new TH2D( Form("thr_spot_%d_%s",i,name.Data()), Form("thr_spot_%d;ns;mV",i), 100,0,200,100,0,1000);
+    thr_spot[i] =  new TH2D( Form("thr_spot_%d_%s",i,name.Data()), Form("thr_spot_%d;ns;mV",i), 100,0,200, 100,0,1000);
     amp_dist[i] =  new TH1D( Form("amp_dist_%d_%s",i,name.Data()), Form("amp_dist_%d;mV",i),    100,0,1000);
     for(int cl=0; cl!=3; ++cl) {
       shape_class[cl][i] = new TProfile( Form("shape_class%d_%d_%s",cl,i,name.Data()), Form("shape_class%d_%d;ns;mV",cl,i),
@@ -87,6 +87,7 @@ void qabar::fill(bar *mybar) {
     delete grH;
   }
 }
+//===============
 void qabar::saveas(TString file){
   TCanvas *main = new TCanvas();
   main->Divide(2,2);
@@ -144,7 +145,7 @@ void qabar::saveas(TString file){
   main->SaveAs( Form("%s.pdf[",file.Data()), "PDF" );
   for(int i=0; i!=4; ++i) {
     for(int icl=0; icl!=3; ++icl) {
-      shape_class[icl][i]->Scale(1/shape_class[icl][i]->GetMinimum());
+      shape_class[icl][i]->Scale(-1/shape_class[icl][i]->GetMinimum());
     }
   }
   for(int i=0; i!=4; ++i) {
@@ -153,6 +154,7 @@ void qabar::saveas(TString file){
     shape_class[1][i]->DrawCopy("same");
     shape_class[0][i]->DrawCopy("same");
   }
+  main->SaveAs( Form("%s.root",file.Data()), "ROOT" );
   main->SaveAs( Form("%s.pdf[",file.Data()), "PDF" );
   main->SaveAs( Form("%s.pdf]",file.Data()), "PDF" ); 
 }

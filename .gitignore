@@ -1,6 +1,7 @@
 pdf/*.pdf
 log/*.txt
 *.cpp
+*.root
 run
 bin
 *~
