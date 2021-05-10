@@ -1,6 +1,7 @@
 #ifndef QABAR_H
 #define QABAR_H
 
+#include "TString.h"
 #include "waveform.h"
 #include "bar.h"
 class TH1D;
@@ -9,7 +10,7 @@ class TProfile;
 
 class qabar {
  public:
-  qabar();
+  qabar(TString name);
   ~qabar();
   void fill(bar *mybar);
   void saveas(TString file);
@@ -18,6 +19,7 @@ class qabar {
  private:
   TH1D *base_mean[4];
   TH1D *base_rms[4];
+  TH2D *wave_all[4];
   TH1D *amp_dist[4];
   TH2D *min_spot[4];
   TH2D *thr_spot[4];

@@ -7,6 +7,11 @@ waveform::waveform() {
   for(int i=0; i!=1024; ++i) {
     fX[i] = fY[i] = 0;
   }
+  fBaseMean = 0;
+  fBaseRMS = 0;
+  fAmp = 0;
+  fAmpBin = 0;
+  fTime = 0;
   fPulseShape = NULL;
   fFit = NULL;
 }
@@ -27,6 +32,11 @@ waveform::waveform(Float_t xxx[1024], Float_t yyy[1024]) {
     fX[i] = xxx[i];
     fY[i] = yyy[i];
   }
+  fBaseMean = 0;
+  fBaseRMS = 0;
+  fAmp = 0;
+  fAmpBin = 0;
+  fTime = 0;
   fPulseShape = NULL;
   fFit = NULL;
 }
@@ -42,6 +52,11 @@ waveform::waveform(TGraph *gr) {
     fX[i] = 0;
     fY[i] = 0;
   }
+  fBaseMean = 0;
+  fBaseRMS = 0;
+  fAmp = 0;
+  fAmpBin = 0;
+  fTime = 0;
   fPulseShape = NULL;
   fFit = NULL;
 }

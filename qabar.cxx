@@ -12,16 +12,24 @@
 #include "TLegend.h"
 #include "TString.h"
 
-qabar::qabar() {
+qabar::qabar(TString name) {
   int color[3] = {kBlue-3,kGreen-3,kRed-3};
   for(int i=0; i!=4; ++i) {
-    base_mean[i] = new TH1D( Form("base_mean_%d",i),Form("base_mean_%d;mV",i),   100,280,360);
-    base_rms[i] =  new TH1D( Form("base_rms_%d",i), Form("base_rms_%d;mV",i),    100,0,20);
-    min_spot[i] =  new TH2D( Form("min_spot_%d",i), Form("min_spot_%d;bin;mV",i),100,0,1024,100,0,1000);
-    thr_spot[i] =  new TH2D( Form("thr_spot_%d",i), Form("thr_spot_%d;ns;mV",i), 100,0,200,100,0,1000);
-    amp_dist[i] =  new TH1D( Form("amp_dist_%d",i), Form("amp_dist_%d;mV",i),    100,0,1000);
+    double minPed = 280;
+    double maxPed = 360;
+    double maxRMS = 20;
+    if(i>=2) { //high gain
+      minPed = 160; maxPed = 600; maxRMS = 200;
+    }
+    base_mean[i] = new TH1D( Form("base_mean_%d_%s",i,name.Data()),Form("base_mean_%d;mV",i),   100,minPed,maxPed);
+    base_rms[i] =  new TH1D( Form("base_rms_%d_%s",i,name.Data()), Form("base_rms_%d;mV",i),    100,0,maxRMS);
+    wave_all[i] =  new TH2D( Form("wave_all_%d_%s",i,name.Data()), Form("wave_all_%d;mV",i),    100,0,200,100,-1050,+1050);
+    min_spot[i] =  new TH2D( Form("min_spot_%d_%s",i,name.Data()), Form("min_spot_%d;bin;mV",i),100,0,1024,100,0,1000);
+    thr_spot[i] =  new TH2D( Form("thr_spot_%d_%s",i,name.Data()), Form("thr_spot_%d;ns;mV",i), 100,0,200,100,0,1000);
+    amp_dist[i] =  new TH1D( Form("amp_dist_%d_%s",i,name.Data()), Form("amp_dist_%d;mV",i),    100,0,1000);
     for(int cl=0; cl!=3; ++cl) {
-      shape_class[cl][i] = new TProfile( Form("shape_class%d_%d",cl,i), Form("shape_class%d_%d;ns;mV",cl,i), 2048,-120,+120 );;
+      shape_class[cl][i] = new TProfile( Form("shape_class%d_%d_%s",cl,i,name.Data()), Form("shape_class%d_%d;ns;mV",cl,i),
+					 2048,-120,+120 );;
       shape_class[cl][i]->SetLineColor( color[cl] );
     }
   }
@@ -39,43 +47,45 @@ qabar::~qabar() {
   //need to clean pointers
 }
 void qabar::fill(bar *mybar) {
-  for(int i=0; i!=2; ++i) {
-    waveform *channelL = mybar->GetLow(i);
-    waveform *channelH = mybar->GetHigh(i);
-    base_mean[i]->Fill( channelL->GetBaseMean() );
-    base_rms[i]->Fill( channelL->GetBaseRMS() );
-    min_spot[i]->Fill( channelL->GetAmplitudeBin(), -channelL->GetAmplitude() );
-    thr_spot[i]->Fill( channelL->GetTime(), -channelL->GetAmplitude() );
-    amp_dist[i]->Fill( -channelL->GetAmplitude() );
-    base_mean[i+2]->Fill( channelH->GetBaseMean() );
-    base_rms[i+2]->Fill( channelH->GetBaseRMS() );
-    min_spot[i+2]->Fill( channelH->GetAmplitudeBin(), -channelH->GetAmplitude() );
-    thr_spot[i+2]->Fill( channelH->GetTime(), -channelH->GetAmplitude() );
-    amp_dist[i+2]->Fill( -channelH->GetAmplitude() );
+  for(int iSiPM=0; iSiPM!=2; ++iSiPM) {
+    waveform *channelL = mybar->GetLow(iSiPM);
+    waveform *channelH = mybar->GetHigh(iSiPM);
+    // [low0 low1] high0 high1
+    base_mean[iSiPM]->Fill( channelL->GetBaseMean() );
+    base_rms[iSiPM]->Fill( channelL->GetBaseRMS() );
+    min_spot[iSiPM]->Fill( channelL->GetAmplitudeBin(), -channelL->GetAmplitude() );
+    thr_spot[iSiPM]->Fill( channelL->GetTime(), -channelL->GetAmplitude() );
+    amp_dist[iSiPM]->Fill( -channelL->GetAmplitude() );
+    // low0 low1 [high0 high1]
+    base_mean[iSiPM+2]->Fill( channelH->GetBaseMean() );
+    base_rms[iSiPM+2]->Fill( channelH->GetBaseRMS() );
+    min_spot[iSiPM+2]->Fill( channelH->GetAmplitudeBin(), -channelH->GetAmplitude() );
+    thr_spot[iSiPM+2]->Fill( channelH->GetTime(), -channelH->GetAmplitude() );
+    amp_dist[iSiPM+2]->Fill( -channelH->GetAmplitude() );
+    // class is based on low gain amplitude
     Double_t amplitudeRaw = -channelL->GetAmplitude();
     int nclass=-1;
-    if( (amplitudeRaw>xclass[0][i]) && (amplitudeRaw<xclass[1][i]) ) nclass = 0;
-    if( (amplitudeRaw>xclass[1][i]) && (amplitudeRaw<xclass[2][i]) ) nclass = 1;
-    if( (amplitudeRaw>xclass[2][i]) && (amplitudeRaw<xclass[3][i]) ) nclass = 2;
-    if(nclass>-1) {
-      TGraph *gr = channelL->GetGraph();
-      for(int isa=0;isa!=1024;++isa) {
-        Double_t xxx = gr->GetPointX(isa) - channelL->GetTime();
-        Double_t yyy = gr->GetPointY(isa);
-        shape_class[nclass][i]->Fill( xxx, yyy );
+    if( (amplitudeRaw>xclass[0][iSiPM]) && (amplitudeRaw<xclass[1][iSiPM]) ) nclass = 0;
+    if( (amplitudeRaw>xclass[1][iSiPM]) && (amplitudeRaw<xclass[2][iSiPM]) ) nclass = 1;
+    if( (amplitudeRaw>xclass[2][iSiPM]) && (amplitudeRaw<xclass[3][iSiPM]) ) nclass = 2;
+    TGraph *grL = channelL->GetGraph();
+    TGraph *grH = channelH->GetGraph();
+    for(int isa=0;isa!=1024;++isa) {
+      Double_t xxL = grL->GetPointX(isa);
+      Double_t yyL = grL->GetPointY(isa);
+      Double_t xxH = grH->GetPointX(isa);
+      Double_t yyH = grH->GetPointY(isa);
+      wave_all[iSiPM]->Fill( xxL, yyL ); // LOWs
+      wave_all[iSiPM+2]->Fill( xxH, yyH ); // HIGHs
+      if(nclass>-1) {
+	double align = channelL->GetTime(); // alignment wrt raw lowa gain T30 (CHANGE ME LATER)
+        shape_class[nclass][iSiPM]->Fill(   xxL - align, yyL );  // LOWs
+        shape_class[nclass][iSiPM+2]->Fill( xxH - align, yyH ); // HIGHs
       }
-      delete gr;
-      gr = channelH->GetGraph();
-      for(int isa=0;isa!=1024;++isa) {
-        Double_t xxx = gr->GetPointX(isa) - channelL->GetTime();
-        Double_t yyy = gr->GetPointY(isa);
-        shape_class[nclass][i+2]->Fill( xxx, yyy );
-      }
-      delete gr;
-      
     }
+    delete grL;
+    delete grH;
   }
-
 }
 void qabar::saveas(TString file){
   TCanvas *main = new TCanvas();
@@ -89,6 +99,7 @@ void qabar::saveas(TString file){
   for(int i=0; i!=4; ++i) {
     main->cd(1+i);
     TF1 *fit = new TF1( Form("fit%d",i), "gaus" );
+    //TF1 *fit = new TF1( Form("fit%d",i), "landau" );
     base_rms[i]->Fit( fit );
     base_rms[i]->DrawCopy();
   }
@@ -100,12 +111,18 @@ void qabar::saveas(TString file){
 
   main->SaveAs( Form("%s.pdf[",file.Data()), "PDF" );
   for(int i=0; i!=4; ++i) {
-    main->cd(1+i);
+    main->cd(1+i)->SetLogz(1);
+    wave_all[i]->DrawCopy("colz");
+  }
+
+  main->SaveAs( Form("%s.pdf[",file.Data()), "PDF" );
+  for(int i=0; i!=4; ++i) {
+    main->cd(1+i)->SetLogz(1);
     min_spot[i]->DrawCopy("colz");
   }
   main->SaveAs( Form("%s.pdf[",file.Data()), "PDF" );
   for(int i=0; i!=4; ++i) {
-    main->cd(1+i);
+    main->cd(1+i)->SetLogz(1);
     thr_spot[i]->DrawCopy("colz");
   }
   main->SaveAs( Form("%s.pdf[",file.Data()), "PDF" );

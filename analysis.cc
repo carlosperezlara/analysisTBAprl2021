@@ -48,10 +48,12 @@ int main(int nvar, char** carg) {
   
 
   gStyle->SetOptStat(0);
-  qabar *mybarqa[4];
-  for(int i=0; i!=4; ++i)
-    mybarqa[i] = new qabar();
-  
+  qabar *mybarqa_bef[4];
+  qabar *mybarqa_aft[4];
+  for(int i=0; i!=4; ++i) {
+    mybarqa_bef[i] = new qabar( Form("qabar_bef_bar%d",i) );
+    mybarqa_aft[i] = new qabar( Form("qabar_aft_bar%d",i) );
+  }
   TFile *file = new TFile( inputfile.Data() );
   TTree *tree = (TTree*) file->Get("pulse");
   tree->SetBranchAddress("channel",&pulse.channel);
@@ -61,6 +63,7 @@ int main(int nvar, char** carg) {
   tree->SetBranchAddress("xSlope",&pulse.xSlope);
   tree->SetBranchAddress("ySlope",&pulse.ySlope);
   tree->SetBranchAddress("chi2",&pulse.chi2);
+  tree->SetBranchAddress("ntracks",&pulse.ntracks);
   //tree->Print();
 
   Long_t nevts = tree->GetEntries();
@@ -75,7 +78,7 @@ int main(int nvar, char** carg) {
     tree->GetEntry(i);
     if((i%500)==0)
       std::cout << "Events processed: " << i << std::endl;
-
+    if(pulse.ntracks!=1) continue;
     for(int ich=0; ich!=8; ++ich) {
       DRSchan[ich]   = new waveform( pulse.times[0], pulse.channel[ich]   );
       DRSchan[ich+8] = new waveform( pulse.times[1], pulse.channel[ich+9] );
@@ -89,25 +92,30 @@ int main(int nvar, char** carg) {
       prototype[ibar]->AddHigh( 1, highB );
       prototype[ibar]->AddLow(  0, lowA  );
       prototype[ibar]->AddLow(  1, lowB  );
+      mybarqa_bef[ibar]->fill( prototype[ibar] );
       lowA->process();
       lowB->process();
       highA->process();
       highB->process();
+      mybarqa_aft[ibar]->fill( prototype[ibar] );
       /*
       main->cd(1+ibar*4); lowA->GetGraph()->Draw("A*");
       main->cd(2+ibar*4); lowB->GetGraph()->Draw("A*");
       main->cd(3+ibar*4); highA->GetGraph()->Draw("A*");
       main->cd(4+ibar*4); highB->GetGraph()->Draw("A*");
       */
-      mybarqa[ibar]->fill( prototype[ibar] );
     }
+    //for(int ich=0; ich!=16; ++ich) {
+    //  delete DRSchan[ich];
+    //}
     //if(i<50) main->SaveAs("check.pdf[","pdf");
 
   }
   //main->SaveAs("check.pdf]","pdf");
   for(int i=0; i!=4; ++i) {
-    mybarqa[i]->saveas( Form("pdf/QA_Run%d_Bar%d",run,i) );
-    mybarqa[i]->makesummary( Form("log/QA_Run%d_Bar%d",run,i) );
+    mybarqa_bef[i]->saveas( Form("pdf/QA_Run%d_Bar%d_BEF",run,i) );
+    mybarqa_aft[i]->saveas( Form("pdf/QA_Run%d_Bar%d",run,i) );
+    mybarqa_aft[i]->makesummary( Form("log/QA_Run%d_Bar%d",run,i) );
   }
   return 0;
 }

@@ -16,6 +16,10 @@ struct qalogentry_t {
 map<Int_t,logbookentry_t> logbook;
 map<Int_t,qalogentry_t> qalog;
 
+TF1 *gainenf;
+
+void LoadGain();
+  
 void loadlogbook();
 void addtoqalog(int);
 
@@ -27,9 +31,11 @@ TGraph* makegraph(int color) {
   return gr;
 }
 int plotQA(TString file="runs.txt") {
+  gStyle->SetOptStat(0);
+  LoadGain();
   loadlogbook();
   ifstream fin(file.Data());
-  TGraph *grVol[4][8];
+  TGraph *grVol[4][8], *grTemp[4][8];
   TGraph *grRMS0[4][8], *grRMS1[4][8];
   int color[4] = { kRed-3, kOrange-3, kCyan-3, kBlue-3  };
   for(int isipm=0; isipm!=8; ++isipm) {
@@ -37,47 +43,90 @@ int plotQA(TString file="runs.txt") {
       grVol[iclass][isipm] = makegraph( color[iclass] );
       grRMS0[iclass][isipm] = makegraph( color[iclass] );
       grRMS1[iclass][isipm] = makegraph( color[iclass] );
+      grTemp[iclass][isipm] = makegraph( color[iclass] );
     }
   }
+
+  vector<int> xrun;
   for(std::string line; std::getline(fin,line);) {
     int run = atoi(line.c_str());
+    xrun.push_back( run );
     int iclass = 0;
     if( (run>=44612)&&(run<44688) ) iclass = 1;
     if( (run>=44688)&&(run<44725) ) iclass = 2;
     if( (run>=44725) ) iclass = 3;
     for(int isipm=2; isipm!=8; ++isipm) {
-      grVol[iclass][isipm]->SetPoint( grVol[iclass][isipm]->GetN(), logbook[run].Vop[isipm], logbook[run].Cur[isipm] );
+      grVol[iclass][isipm]->SetPoint(  grVol[iclass][isipm]->GetN(),  logbook[run].Vop[isipm],      logbook[run].Cur[isipm] );
       grRMS0[iclass][isipm]->SetPoint( grRMS0[iclass][isipm]->GetN(), qalog[run].RMSbase[isipm][0], logbook[run].Cur[isipm] );
+      cout << run << " " << isipm << " | " << qalog[run].RMSbase[isipm][0] << " ";
       grRMS1[iclass][isipm]->SetPoint( grRMS1[iclass][isipm]->GetN(), qalog[run].RMSbase[isipm][1], logbook[run].Cur[isipm] );
+      grTemp[iclass][isipm]->SetPoint( grVol[iclass][isipm]->GetN(),  logbook[run].Vop[isipm],      logbook[run].Temp[isipm] );
+      cout << qalog[run].RMSbase[isipm][1] << endl;
     }
     //cout << logbook[run].Vop[1] << endl;
   }
   fin.close();
 
-  TH2D *axis0 = new TH2D("axis0",";Bias Voltage  (V);Current  (mA)",100,37,43,100,0,6);  
-  TH2D *axis10 = new TH2D("axis10",";RMS baseline  (mV);Current  (mA)",100,0,7,100,0,6);  
-  TH2D *axis11 = new TH2D("axis11",";RMS baseline  (mV);Current  (mA)",100,0,45,100,0,6);  
-  
+
+  //========
+  TH2D *axis0  = new TH2D("axis0", ";Bias Voltage  (V);Current  (mA)" ,100,37,43,100,0,6);  
+  TH2D *axis10 = new TH2D("axis10",";RMS baseline LOW gain channel  (mV);Current  (mA)",100,0,5,100,0,6);  
+  TH2D *axis11 = new TH2D("axis11",";RMS baseline HIGH gain channel (mV);Current  (mA)",100,0,100,100,0,6);  
+  TH2D *axis2  = new TH2D("axis2", ";Bias Voltage  (V);Temperature",   100,37,43,100,-40,-10);
+  TLegend *leg = new TLegend(0.1,0.1,0.9,0.9);
+  leg->AddEntry( grVol[0][0], "Angle: 0 deg : NI, 1e13, 5e13, 2e14" );
+  leg->AddEntry( grVol[1][0], "Angle: 40 deg: NI, 1e13, 5e13, 2e14" );
+  leg->AddEntry( grVol[2][0], "Angle: 52 deg: 1e13, 5e13, 2e14" );
+  leg->AddEntry( grVol[3][0], "Angle: 52 deg: NI, 5e13, 2e14" );
+  TCanvas *main0 = new TCanvas();
+  main0->Divide(3,2,0,0);
+  TCanvas *main10 = new TCanvas();
+  main10->Divide(3,2,0,0);
+  TCanvas *main11 = new TCanvas();
+  main11->Divide(3,2,0,0);
+  TCanvas *main2 = new TCanvas();
+  main2->Divide(3,2,0,0);
+
+  TLatex *tex = new TLatex();
+  int padindex[8] = {1,1, 1,4, 2,5, 3,6 };
   for(int isipm=2; isipm!=8; ++isipm) {
-    new TCanvas();
+    main0->cd( padindex[isipm] )->SetGridx(1);
+    main0->cd( padindex[isipm] )->SetGridy(1);
     axis0->SetTitle( Form("SIPM No %d",isipm) );
     axis0->DrawCopy();
     for(int iclass=0; iclass!=4; ++iclass)
       grVol[iclass][isipm]->Draw("PSAME");
 
-    TCanvas *main = new TCanvas();
-    main->Divide(1,2);
-    axis11->SetTitle( Form("SIPM No %d",isipm) );
-    main->cd(1);
+    main10->cd( padindex[isipm] )->SetGridx(1);
+    main10->cd( padindex[isipm] )->SetGridy(1);
+    axis10->SetTitle( Form("SIPM No %d",isipm) );
     axis10->DrawCopy();
-    main->cd(2);
-    axis11->DrawCopy();
     for(int iclass=0; iclass!=4; ++iclass) {
-      main->cd(1);
       grRMS0[iclass][isipm]->Draw("PSAME");
-      main->cd(2);
-      grRMS1[iclass][isipm]->Draw("PSAME");
+      /*
+      for(int ip=0; ip!=grRMS0[iclass][isipm]->GetN(); ++ip) {
+	tex->SetTextColor( color[iclass] );
+	tex->DrawLatex( grRMS0[iclass][isipm]->GetPointX(ip),
+			grRMS0[iclass][isipm]->GetPointY(ip),
+			Form("%d",xrun[ip]) );
+      }
+      */
     }
+    
+    main11->cd( padindex[isipm] )->SetGridx(1);
+    main11->cd( padindex[isipm] )->SetGridy(1); 
+    axis11->SetTitle( Form("SIPM No %d",isipm) );
+    axis11->DrawCopy();
+    for(int iclass=0; iclass!=4; ++iclass)
+      grRMS1[iclass][isipm]->Draw("PSAME");
+
+    main2->cd( padindex[isipm] )->SetGridx(1);
+    main2->cd( padindex[isipm] )->SetGridy(1);
+    axis2->SetTitle( Form("SIPM No %d",isipm) );
+    axis2->DrawCopy();
+    for(int iclass=0; iclass!=4; ++iclass)
+      grTemp[iclass][isipm]->Draw("PSAME");
+
   }
   
   return 0;
@@ -141,6 +190,10 @@ void loadlogbook() {
 }
 
 void addtoqalog(int run) {
+  for(int isipm=0; isipm!=8; ++isipm) {
+    qalog_entry.RMSbase[isipm][0];
+    qalog_entry.RMSbase[isipm][1];
+  }
   for(int ibar=0; ibar!=4; ++ibar) {
     ifstream finL( Form("log/QA_Run%d_Bar%d.txt",run,ibar) );
     int isipm0 = ibar*2;
@@ -153,4 +206,17 @@ void addtoqalog(int run) {
     finL.close();
   }
   qalog[run] = qalog_entry;
+}
+
+void LoadGain() {
+  TFile *rfile = new TFile("~/MTDcharacterization/HDR2data/sipm_spec_input_HDR2-015-v2-1e13.root");
+  rfile->ls();
+  TF1 *gai = (TF1*) rfile->Get("fGain_vs_OV");
+  cout << gai->GetFormula()->GetExpFormula() << endl;
+  double p0G = gai->GetParameter(0);
+  double p1G = gai->GetParameter(1);
+  TF1 *enf = (TF1*) rfile->Get("fENF_vs_OV");
+  double p0E = enf->GetParameter(0);
+  double p1E = enf->GetParameter(1);
+  gainenf = new TF1("gainenf",Form("(%f+x*%f)*(1+%f*x+%f*x*x)",p0G,p1G,p0E,p1E),0,10);
 }
