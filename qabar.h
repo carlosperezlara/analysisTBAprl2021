@@ -23,6 +23,8 @@ class qabar {
   TH1D *amp_dist[4];
   TH2D *min_spot[4];
   TH2D *thr_spot[4];
+  TH2D *amp_corr[2];
+  TH1D *amp_rati[2];
   TProfile *shape_class[3][4];
   Double_t xclass[4][4];
 

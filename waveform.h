@@ -20,6 +20,7 @@ class waveform {
   Double_t GetTime() {return fTime;}
   Double_t GetBaseMean() {return fBaseMean;}
   Double_t GetBaseRMS() {return fBaseRMS;}
+  Double_t FixThreshold(Double_t thr_in_mV);
   
  private:
   void statX(Double_t &mean, Double_t &rms,Int_t ini, Int_t fin);

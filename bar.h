@@ -16,6 +16,13 @@ class bar {
  private:
   waveform *fLow[2];
   waveform *fHigh[2];
+  Double_t fEnergy[2];
+  Double_t fTime[2];
+
+  TH2D *fHist_Walk[2];
+  TH1D *fHist_Energy[2];
+  TH1D *fHist_Time[2];
+  
 };
 
 #endif

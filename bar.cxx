@@ -22,6 +22,14 @@ bar::~bar() {
 }
 //===========
 void bar::process() {
+  for(int iSiPM=0; iSiPM!=2; ++iSiPM) {
+    // quick process of waveforms, baseline subtraction
+    fLow[iSiPM]->process();
+    fHigh[iSiPM]->process();
+    fEnergy[iSiPM] = fLow[iSiPM]->GetAmplitude();
+    fTime[iSiPM] = fHigh[iSiPM]->FixThreshold( 500 );
+  }
+  
 }
 //===========
 void bar::AddLow(Int_t idx, waveform *wf) {
