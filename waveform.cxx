@@ -68,8 +68,10 @@ void waveform::process() {
   //
   minimumY( fAmp, fAmpBin, 205, 1021 ); // is [205,1020] a good range?
   //
-  fTime = timingCTD( 0.3*fAmp, 5, fAmpBin );
-  //
+}
+Double_t waveform::FixThreshold( Double_t thr ) {
+  fTime = timingCTD( thr, 5, fAmpBin );
+  return fTime;
 }
 //===========
 TGraph* waveform::GetGraph() {

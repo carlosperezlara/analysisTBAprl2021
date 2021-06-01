@@ -1,6 +1,8 @@
 #ifndef BAR_H
 #define BAR_H
 
+#include "TH1D.h"
+#include "TH2D.h"
 #include "waveform.h"
 
 class bar {
